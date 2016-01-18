@@ -1,6 +1,7 @@
 #include "PWM.h"
 #include "globals.h"
 #include "stm32f4xx_hal_tim.h"
+#include "main.h"
 
 static TIM_HandleTypeDef hnd_tim1;
 
@@ -15,7 +16,7 @@ int pwm_init(){
 	hnd_tim1.Init.Prescaler = 168;	
 	hnd_tim1.Init.RepetitionCounter = 0;
 	cConfig.OCMode =  TIM_OCMODE_PWM1;
-	cConfig.Pulse = 1999;
+	cConfig.Pulse = 1000;
 	cConfig.OCPolarity = TIM_OCPOLARITY_HIGH;
 	cConfig.OCIdleState = TIM_OCIDLESTATE_RESET;
 	cConfig.OCFastMode = TIM_OCFAST_ENABLE;
@@ -24,10 +25,10 @@ int pwm_init(){
 	HAL_TIM_PWM_ConfigChannel(&hnd_tim1,&cConfig, TIM_CHANNEL_2);
 	HAL_TIM_PWM_ConfigChannel(&hnd_tim1,&cConfig, TIM_CHANNEL_3);
 	HAL_TIM_PWM_ConfigChannel(&hnd_tim1,&cConfig, TIM_CHANNEL_4);
-	HAL_TIM_PWM_Start(&hnd_tim1,TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&hnd_tim1,TIM_CHANNEL_2);
-	HAL_TIM_PWM_Start(&hnd_tim1,TIM_CHANNEL_3);
-	HAL_TIM_PWM_Start(&hnd_tim1,TIM_CHANNEL_4);
+	HAL_TIM_PWM_Start_IT(&hnd_tim1,TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start_IT(&hnd_tim1,TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start_IT(&hnd_tim1,TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start_IT(&hnd_tim1,TIM_CHANNEL_4);
 	
 
 	return success;
@@ -43,12 +44,12 @@ void pwm_set_pulsewidth(int newWidth, int channel){
 }
 
 void bldc_set_power(int newPower, int channel){
-	if(newPower > 1000){
-		newPower  = 1000;
+	if(newPower > 999){
+		newPower  = 999;
 	}else if(newPower < 0){
 		newPower  = 0;
 	}
-	pwm_set_pulsewidth(1999-newPower, channel);
+	pwm_set_pulsewidth(1000+newPower, channel);
 }
 
 void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *hnd){
@@ -64,13 +65,17 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *hnd){
 	PWMPinsInit.Alternate = GPIO_AF1_TIM1;
 	HAL_GPIO_Init(GPIOE, &PWMPinsInit);
 	
-		HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 1, 1);
-  //enable the interrupt for UPDATE EVENT
-  HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+	HAL_NVIC_SetPriority(TIM1_CC_IRQn, 1, 1);
 	
+	//enable the interrupt for UPDATE EVENT
+	HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
 }
 
-void TIM1_UP_TIM10_IRQHandler(){
-	HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_14);
-	HAL_NVIC_ClearPendingIRQ(TIM1_UP_TIM10_IRQn);
+void TIM1_CC_IRQHandler(){
+	HAL_TIM_IRQHandler(&hnd_tim1);
 }
+
+void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *hnd){
+	callback_PWMOut();
+}
+

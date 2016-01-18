@@ -3,7 +3,7 @@
  * Purpose: STDOUT USART Template
  * Rev.:    1.0.0
  *-----------------------------------------------------------------------------*/
- 
+
 /* Copyright (c) 2013 - 2015 ARM LIMITED
 
    All rights reserved.
@@ -17,7 +17,7 @@
    - Neither the name of ARM nor the names of its contributors may be used
      to endorse or promote products derived from this software without
      specific prior written permission.
-   *
+ *
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -30,36 +30,36 @@
    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
    POSSIBILITY OF SUCH DAMAGE.
    ---------------------------------------------------------------------------*/
- 
+
 
 #include "stdout_USART.h"
 #include "globals.h"
 #include "PWM.h"
 //-------- <<< Use Configuration Wizard in Context Menu >>> --------------------
- 
+
 // <h>STDOUT USART Interface
- 
+
 //   <o>Connect to hardware via Driver_USART# <0-255>
 //   <i>Select driver control block for USART interface
 #define USART_DRV_NUM           3
- 
+
 //   <o>Baudrate
 #define USART_BAUDRATE          57600
- 
+
 // </h>
- 
- 
+
+
 #define _USART_Driver_(n)  Driver_USART##n
 #define  USART_Driver_(n) _USART_Driver_(n)
- 
+
 extern ARM_DRIVER_USART  USART_Driver_(USART_DRV_NUM);
 #define ptrUSART       (&USART_Driver_(USART_DRV_NUM))
- 
+
 #define BUFFERSIZE_IN 100
 #define BUFFERSIZE_OUT 100
 #define BUFFERSIZE_COM 10
 #define MAX_SENDING_CODES 8
- 
+
 static uint8_t input_buf[BUFFERSIZE_IN];
 static uint8_t output_buffer1[BUFFERSIZE_OUT];
 static uint8_t output_buffer2[BUFFERSIZE_OUT];
@@ -90,7 +90,7 @@ int buildCommand(uint8_t* buffer, uint8_t* command){
 			commandPos = 0;
 		}else if(!gotStart){
 			//out of message
-		}else if(currentChar == 0x03){
+		}else if(currentChar == 0x03  && (command[0]!='x' || commandPos > 3)){
 			gotStart = 0;
 			if(commandPos > 0)
 				done = 1;
@@ -105,7 +105,7 @@ int buildCommand(uint8_t* buffer, uint8_t* command){
 			currentPos = 0;
 		}
 	}
-	
+
 	if(!reciving){
 		startRec(buffer);
 		reciving = 1;
@@ -137,28 +137,28 @@ int sendCommand(uint8_t * toSend,int lenght){
 		}
 		currentPos = 0;
 	}
-	
+
 	return 0;
 }
 void myUSART_callback(uint32_t event){
 	switch (event)
 	{
 	case ARM_USART_EVENT_RECEIVE_COMPLETE: 
-	startRec(input_buf);
-	break;
+		startRec(input_buf);
+		break;
 	case ARM_USART_EVENT_TRANSFER_COMPLETE:
 	case ARM_USART_EVENT_SEND_COMPLETE:
 	case ARM_USART_EVENT_TX_COMPLETE:
-	break;
+		break;
 
 	case ARM_USART_EVENT_RX_TIMEOUT:
-	break;
+		break;
 
 	case ARM_USART_EVENT_RX_OVERFLOW:
 		puts("Lost data");
-	break;
+		break;
 	case ARM_USART_EVENT_TX_UNDERFLOW:
-	break;
+		break;
 	}
 }
 
@@ -205,7 +205,7 @@ void sendCode(uint8_t codeToSend, uint8_t* dataBuffer){
 } /* TODO BUILD HELPER FUNKTION FOR BUFFER BUILDING!!!!!!*/
 
 void startRecording(uint8_t code){
-		uint8_t foundToDel = 255;
+	uint8_t foundToDel = 255;
 	uint8_t i;
 	for(i = 0; i < sendingCodesCurrent; i++){
 		if(sendingCodes[i] == code-'0'){
@@ -241,8 +241,27 @@ void changeValue(uint8_t* dataBuffer){
 	uint8_t code = dataBuffer[0]-'0';
 	if(code < 4){
 		//bldc_set_power((dataBuffer[1]<<8)+dataBuffer[2],code);
-	  power[code] = (dataBuffer[1]<<8) + dataBuffer[2];
+		power[code] = helperBufferToInt(dataBuffer+1,2);
 	}
+	else if(code < 8){
+		switch (code) {
+			case 4:
+				pidDataX->kp = helperBufferToInt(dataBuffer+1,2);
+				break;
+			case 5:
+				pidDataX->ki = helperBufferToInt(dataBuffer+1,2);
+				break;
+			case 6:
+				pidDataY->kp = helperBufferToInt(dataBuffer+1,2);
+				break;
+			case 7:
+				pidDataY->ki = helperBufferToInt(dataBuffer+1,2);
+				break;
+			default:
+				break;
+		}
+	}
+
 }
 
 void kommuHandler(void){
@@ -254,16 +273,16 @@ void kommuHandler(void){
 				sendCommand("a",1);
 				kommuNoPing = 0;
 			}
-		break;
+			break;
 		case 'b':
 			sendCommand("c",1);
 			kommuConnected = 1;
 			kommuNoPing = 0;
 			HAL_GPIO_WritePin(GPIOD,GPIO_PIN_12,GPIO_PIN_SET);
-		break;
+			break;
 		case 's':
 			stopRecording(command[1]);
-		  break;
+			break;
 		case 'r':
 			if(kommuConnected){
 				startRecording(command[1]);
@@ -271,7 +290,7 @@ void kommuHandler(void){
 			break;
 		case 'q':
 			stopRecordingAll();
-		  break;
+			break;
 		case 'x':
 			if(kommuConnected){
 				changeValue(command+1);
@@ -296,72 +315,77 @@ void kommuHandler(void){
 
 int startRec(uint8_t* buffer){
 	if (ptrUSART->Receive(buffer, BUFFERSIZE_IN) != ARM_DRIVER_OK) {
-    return (-1);
-  }
+		return (-1);
+	}
 	return 0;
 }
 
 /**
   Initialize stdout
- 
+
   \return          0 on success, or -1 on error.
-*/
+ */
 int std_init (void) {
-  int32_t status;
- 
-  status = ptrUSART->Initialize(myUSART_callback);
-  if (status != ARM_DRIVER_OK) return (-1);
- 
-  status = ptrUSART->PowerControl(ARM_POWER_FULL);
-  if (status != ARM_DRIVER_OK) return (-1);
- 
-  status = ptrUSART->Control(ARM_USART_MODE_ASYNCHRONOUS |
-                             ARM_USART_DATA_BITS_8       |
-                             ARM_USART_PARITY_NONE       |
-                             ARM_USART_STOP_BITS_1       |
-                             ARM_USART_FLOW_CONTROL_NONE,
-                             USART_BAUDRATE);
-  if (status != ARM_DRIVER_OK) return (-1);
+	int32_t status;
 
-  status = ptrUSART->Control(ARM_USART_CONTROL_TX , 1);
+	status = ptrUSART->Initialize(myUSART_callback);
+	if (status != ARM_DRIVER_OK) return (-1);
+
+	status = ptrUSART->PowerControl(ARM_POWER_FULL);
+	if (status != ARM_DRIVER_OK) return (-1);
+
+	status = ptrUSART->Control(ARM_USART_MODE_ASYNCHRONOUS |
+			ARM_USART_DATA_BITS_8       |
+			ARM_USART_PARITY_NONE       |
+			ARM_USART_STOP_BITS_1       |
+			ARM_USART_FLOW_CONTROL_NONE,
+			USART_BAUDRATE);
+	if (status != ARM_DRIVER_OK) return (-1);
+
+	status = ptrUSART->Control(ARM_USART_CONTROL_TX , 1);
 	status = ptrUSART->Control(ARM_USART_CONTROL_RX , 1);
-  if (status != ARM_DRIVER_OK) return (-1);
+	if (status != ARM_DRIVER_OK) return (-1);
 
-  return (0);
+	return (0);
 }
- 
+
 /**
   Put a character to the stdout
- 
+
   \param[in]   ch  Character to output
   \return          The character written, or -1 on write error.
-*/
+ */
 int stdout_putchar (int ch) {
-  uint8_t buf[1];
- 
-  buf[0] = ch;
-  if (ptrUSART->Send(buf, 1) != ARM_DRIVER_OK) {
-    return (-1);
-  }
-  while (ptrUSART->GetTxCount() != 1);
-  return (ch);
+	uint8_t buf[1];
+
+	buf[0] = ch;
+	if (ptrUSART->Send(buf, 1) != ARM_DRIVER_OK) {
+		return (-1);
+	}
+	while (ptrUSART->GetTxCount() != 1);
+	return (ch);
 }
 
 /**
   Get a character from stdin
- 
+
   \return     The next character from the input, or -1 on read error.
-*/
+ */
 int stdin_getchar (void) {
-  uint8_t buf[1];
- 
-  if (ptrUSART->Receive(buf, 1) != ARM_DRIVER_OK) {
-    return (-1);
-  }
-  while (ptrUSART->GetRxCount() != 1);
-  return (buf[0]);
+	uint8_t buf[1];
+
+	if (ptrUSART->Receive(buf, 1) != ARM_DRIVER_OK) {
+		return (-1);
+	}
+	while (ptrUSART->GetRxCount() != 1);
+	return (buf[0]);
 }
 
 int stderr_putchar (int ch){
 	return stdout_putchar(ch);
 }
+
+int helperBufferToInt(uint8_t* buffer, int lenght){
+	return ( (buffer[0]<<8) + buffer[1]);
+}
+

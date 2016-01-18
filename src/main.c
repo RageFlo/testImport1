@@ -7,6 +7,8 @@
   * @brief   Main program body (with modifications by ARM)
   ******************************************************************************
 
+*/
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "globals.h"
@@ -15,6 +17,7 @@
 #include "Daten_Filter.h"
 #include "PWM.h"
 #include "PID.h"
+#include <stdio.h>
 
 #ifdef _RTE_
 #include "RTE_Components.h"             // Component selection
@@ -37,7 +40,7 @@ static uint32_t delayTime;
 static struct pid_datastruct pidDataXObj;
 static struct pid_datastruct pidDataYObj;
 /* Private function prototypes -----------------------------------------------*/
-static void SystemClock_Config(void);
+//static void SystemClock_Config(void);
 static void Error_Handler(void);
 static void main_init(void);
 static void main_loop(void);
@@ -118,13 +121,51 @@ static void main_loop(void){
 		kommuHandler();
 	}
 	
+	if(!(loopCounter)){
+
+	}
+
 //	if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0) == GPIO_PIN_SET){
 //		bldc_set_power(1000,1);
 //	}else{
 //		bldc_set_power(power[0],1);
 //	}
+
 	loopCounter++;
 }
+
+
+void callback_MPU6050(void){
+	static uint32_t last = 0;
+	uint32_t current = HAL_GetTick10u();
+	timeDiffMPU = current - last;
+	last = current;
+
+	MPU6050_GetRawAccelGyro(acceltempgyroVals);	// GET ACCLEx3 TEMP GYROx3
+
+	filterMain();	// FILTER MPU DATA
+
+	HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_3);
+	HAL_NVIC_ClearPendingIRQ(EXTI3_IRQn);
+}
+
+void callback_PWMOut(void){
+	int i;
+	pidY_X = pid_run(pidDataX,angleComple[0] / 131, 900);
+	pidY_Y = pid_run(pidDataY,angleComple[1] / 131, 900);
+	for( i = 0; i < 4; i++){
+		bldc_set_power(power[i],i+1);
+	}
+}
+
+
+
+
+
+
+
+
+
 
 
 

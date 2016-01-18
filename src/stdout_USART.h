@@ -13,6 +13,6 @@ void stopRecording(uint8_t code);
 int std_init (void);
 int stdout_putchar (int ch) ;
 int stdin_getchar (void);
-
 int stderr_putchar (int ch);
+int helperBufferToInt(uint8_t* buffer, int lenght);
 #endif
