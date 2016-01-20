@@ -63,6 +63,9 @@ extern ARM_DRIVER_USART  USART_Driver_(USART_DRV_NUM);
 static uint8_t input_buf[BUFFERSIZE_IN];
 static uint8_t output_buffer1[BUFFERSIZE_OUT];
 static uint8_t output_buffer2[BUFFERSIZE_OUT];
+static int32_t output_currentBufferNr = 1;
+static int32_t output_currentPos = 0;
+static uint8_t* output_currentBuffer = output_buffer1;
 static uint8_t buffer[10];
 static uint8_t sendingCodes[MAX_SENDING_CODES];
 static uint8_t sendingCodesCurrent = 0;
@@ -116,30 +119,15 @@ int buildCommand(uint8_t* buffer, uint8_t* command){
 
 
 int sendCommand(uint8_t * toSend,int lenght){
-	static int currentBufferNr = 1;
-	static int currentPos = 0;
-	static uint8_t* currentBuffer = output_buffer1;
-
 	int i;
-	currentBuffer[currentPos++] = 0x02;
+	output_currentBuffer[output_currentPos++] = 0x02;
 	for(i = 0; i < lenght; i++){
-		currentBuffer[currentPos++] = toSend[i];
+		output_currentBuffer[output_currentPos++] = toSend[i];
 	}
-	currentBuffer[currentPos++] = 0x03;
-	if(!ptrUSART->GetStatus().tx_busy){
-		ptrUSART->Send(currentBuffer,currentPos);
-		if(currentBufferNr == 1){
-			currentBuffer = output_buffer2;
-			currentBufferNr = 2;
-		}else{
-			currentBuffer = output_buffer1;
-			currentBufferNr = 1;
-		}
-		currentPos = 0;
-	}
-
+	output_currentBuffer[output_currentPos++] = 0x03;
 	return 0;
 }
+
 void myUSART_callback(uint32_t event){
 	switch (event)
 	{
@@ -164,45 +152,39 @@ void myUSART_callback(uint32_t event){
 
 void sendCode(uint8_t codeToSend, uint8_t* dataBuffer){
 	int lenght = 2;
+	uint16_t currentTime = HAL_GetTick()/100;
+	//currentTime = 2001;
 	buffer[1] = codeToSend;
 	if(codeToSend < 0x07){
-		buffer[0] = 'v';	
-		buffer[2] = (uint8_t)(acceltempgyroValsFiltered[codeToSend]>>8);
-		buffer[3] = (uint8_t)(acceltempgyroValsFiltered[codeToSend]);
-		lenght += 2;
-	}else if(codeToSend < 0x0A){
-		buffer[0] = 'w';	
-		buffer[2] = (uint8_t)(angleGyro[codeToSend-0x07]>>24);
-		buffer[3] = (uint8_t)(angleGyro[codeToSend-0x07]>>16);
-		buffer[4] = (uint8_t)(angleGyro[codeToSend-0x07]>>8);
-		buffer[5] = (uint8_t)(angleGyro[codeToSend-0x07]);
+		buffer[0] = 'V';
+		helperShortToBuffer(buffer+2,acceltempgyroValsFiltered[codeToSend]);
+		helperShortToBuffer(buffer+6,currentTime);
 		lenght += 4;
+	}else if(codeToSend < 0x0A){
+		buffer[0] = 'W';
+		helperIntToBuffer(buffer+2,angleGyro[codeToSend-0x07]);
+		helperShortToBuffer(buffer+6,currentTime);
+		lenght += 6;
 	}
 	else if(codeToSend < 0x0D){
-		buffer[0] = 'w';	
-		buffer[2] = (uint8_t)(angleAccel[codeToSend-0x0A]>>24);
-		buffer[3] = (uint8_t)(angleAccel[codeToSend-0x0A]>>16);
-		buffer[4] = (uint8_t)(angleAccel[codeToSend-0x0A]>>8);
-		buffer[5] = (uint8_t)(angleAccel[codeToSend-0x0A]);
-		lenght += 4;
+		buffer[0] = 'W';
+		helperIntToBuffer(buffer+2,angleAccel[codeToSend-0x0A]);
+		helperShortToBuffer(buffer+6,currentTime);
+		lenght += 6;
 	}
 	else if(codeToSend < 0x11){
-		buffer[0] = 'w';	
-		buffer[2] = (uint8_t)(angleComple[codeToSend-0x0D]>>24);
-		buffer[3] = (uint8_t)(angleComple[codeToSend-0x0D]>>16);
-		buffer[4] = (uint8_t)(angleComple[codeToSend-0x0D]>>8);
-		buffer[5] = (uint8_t)(angleComple[codeToSend-0x0D]);
-		lenght += 4;
+		buffer[0] = 'W';
+		helperIntToBuffer(buffer+2,angleComple[codeToSend-0x0D]);
+		helperShortToBuffer(buffer+6,currentTime);
+		lenght += 6;
 	}else if(codeToSend == 0x11){
-		buffer[0] = 'w';	
-		buffer[2] = (uint8_t)(pidY_X>>24);
-		buffer[3] = (uint8_t)(pidY_X>>16);
-		buffer[4] = (uint8_t)(pidY_X>>8);
-		buffer[5] = (uint8_t)(pidY_X);
-		lenght += 4;
+		buffer[0] = 'W';
+		helperIntToBuffer(buffer+2,pidY_X);
+		helperShortToBuffer(buffer+6,currentTime);
+		lenght += 6;
 	}
 	sendCommand(buffer, lenght);
-} /* TODO BUILD HELPER FUNKTION FOR BUFFER BUILDING!!!!!!*/
+}
 
 void startRecording(uint8_t code){
 	uint8_t foundToDel = 255;
@@ -308,7 +290,19 @@ void kommuHandler(void){
 		HAL_GPIO_WritePin(GPIOD,GPIO_PIN_12,GPIO_PIN_RESET);
 	}else{
 		kommuNoPing++;
-	}		
+	}
+
+	if((output_currentPos>0) && !ptrUSART->GetStatus().tx_busy){
+		ptrUSART->Send(output_currentBuffer,output_currentPos);
+		if(output_currentBufferNr == 1){
+			output_currentBuffer = output_buffer2;
+			output_currentBufferNr = 2;
+		}else{
+			output_currentBuffer = output_buffer1;
+			output_currentBufferNr = 1;
+		}
+		output_currentPos = 0;
+	}
 }
 
 
@@ -388,4 +382,19 @@ int stderr_putchar (int ch){
 int helperBufferToInt(uint8_t* buffer, int lenght){
 	return ( (buffer[0]<<8) + buffer[1]);
 }
+
+void helperIntToBuffer(uint8_t* buffer, int input){
+	buffer[0] = (uint8_t)(input>>24);
+	buffer[1] = (uint8_t)(input>>16);
+	buffer[2] = (uint8_t)(input>>8);
+	buffer[3] = (uint8_t)(input);
+}
+
+void helperShortToBuffer(uint8_t* buffer, uint16_t input){
+	buffer[0] = (uint8_t)(input>>8);
+	buffer[1] = (uint8_t)(input);
+}
+
+
+
 
