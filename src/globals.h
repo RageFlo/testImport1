@@ -2,7 +2,8 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 #include "stm32f4xx_hal.h"
- struct pid_datastruct {
+
+struct pid_datastruct {
 	int last_val;
 	int int_val;
 	int kp;

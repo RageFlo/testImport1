@@ -56,7 +56,7 @@ extern ARM_DRIVER_USART  USART_Driver_(USART_DRV_NUM);
 #define ptrUSART       (&USART_Driver_(USART_DRV_NUM))
 
 #define BUFFERSIZE_IN 100
-#define BUFFERSIZE_OUT 100
+#define BUFFERSIZE_OUT 280
 #define BUFFERSIZE_COM 10
 #define MAX_SENDING_CODES 8
 
@@ -120,6 +120,8 @@ int buildCommand(uint8_t* buffer, uint8_t* command){
 
 int sendCommand(uint8_t * toSend,int lenght){
 	int i;
+	if(output_currentPos+2+lenght > BUFFERSIZE_OUT)
+		return -1;
 	output_currentBuffer[output_currentPos++] = 0x02;
 	for(i = 0; i < lenght; i++){
 		output_currentBuffer[output_currentPos++] = toSend[i];

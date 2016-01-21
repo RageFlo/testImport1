@@ -114,7 +114,7 @@ static void main_init(void){
 	
 static void main_loop(void){
 	static uint32_t loopCounter = 0;
-	static uint32_t divider100ms = 100;
+	static uint32_t divider100ms = 10;
 	
 	if(!(loopCounter%divider100ms)){
 		HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_15);
@@ -140,19 +140,16 @@ void callback_MPU6050(void){
 	uint32_t current = HAL_GetTick10u();
 	timeDiffMPU = current - last;
 	last = current;
-
 	MPU6050_GetRawAccelGyro(acceltempgyroVals);	// GET ACCLEx3 TEMP GYROx3
-
 	filterMain();	// FILTER MPU DATA
-
 	HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_3);
 	HAL_NVIC_ClearPendingIRQ(EXTI3_IRQn);
 }
 
 void callback_PWMOut(void){
 	int i;
-	pidY_X = pid_run(pidDataX,angleComple[0] / 131, 900);
-	pidY_Y = pid_run(pidDataY,angleComple[1] / 131, 900);
+	pidY_X = pid_run_use_gyro(pidDataX , 900 , angleComple[0] / 131 , acceltempgyroValsFiltered[0]  / 131);
+	pidY_Y = pid_run_use_gyro(pidDataY , 900 , angleComple[1] / 131 , acceltempgyroValsFiltered[1]  / 131);
 	for( i = 0; i < 4; i++){
 		bldc_set_power(power[i],i+1);
 	}

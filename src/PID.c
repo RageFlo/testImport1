@@ -9,22 +9,33 @@ void pid_init(struct pid_datastruct* to_int, int inKP, int inKI, int inKD, int i
 	to_int->kd = inKD;
 	to_int->lim_int = inLIM;
 }
-int pid_run(struct pid_datastruct* pidData, int x, int w){
+
+int pi_run(struct pid_datastruct* pidData, int w, int x){
 	int e, y;
 	e = w - x;
 	pidData->int_val += e*pidData->dt;
-	
+	pidData->last_val = e;
 	if(pidData->int_val > pidData->lim_int){
 		pidData->int_val = pidData->lim_int;
 	}else if(pidData->int_val < -pidData->lim_int){
 		pidData->int_val = -pidData->lim_int;
 	}
-	
 	y = (pidData->kp * e)/PIDDOWNSCALE;
 	y += (pidData->ki * pidData->int_val)/PIDDOWNSCALE;
-	y += (pidData->kp * (e - pidData->last_val) / pidData->dt)/PIDDOWNSCALE; // USE GYRO INFO INSTEAD???!
-	
-	pidData->last_val = e;
-	
 	return y;
 }
+
+int pid_run_use_gyro(struct pid_datastruct* pidData, int w, int x, int deltax){
+	int y;
+	y = pi_run(pidData, w, x);
+	y += (pidData->kd * deltax)/PIDDOWNSCALE;
+	return y;
+}
+
+int pid_run(struct pid_datastruct* pidData, int w, int x){
+	int y;
+	y = pi_run(pidData, w, x);
+	y += (pidData->kd * ((w - x) - pidData->last_val) / pidData->dt)/PIDDOWNSCALE; // USE GYRO INFO INSTEAD???!
+	return y;
+}
+
