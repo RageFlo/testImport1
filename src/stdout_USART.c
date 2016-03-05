@@ -160,7 +160,7 @@ void sendCode(uint8_t codeToSend, uint8_t* dataBuffer){
 	if(codeToSend < 0x07){
 		buffer[0] = 'V';
 		helperShortToBuffer(buffer+2,acceltempgyroValsFiltered[codeToSend]);
-		helperShortToBuffer(buffer+6,currentTime);
+		helperShortToBuffer(buffer+4,currentTime);
 		lenght += 4;
 	}else if(codeToSend < 0x0A){
 		buffer[0] = 'W';
@@ -179,9 +179,14 @@ void sendCode(uint8_t codeToSend, uint8_t* dataBuffer){
 		helperIntToBuffer(buffer+2,angleComple[codeToSend-0x0D]);
 		helperShortToBuffer(buffer+6,currentTime);
 		lenght += 6;
-	}else if(codeToSend == 0x11){
+	}else if(codeToSend < 0x12){
 		buffer[0] = 'W';
 		helperIntToBuffer(buffer+2,pidY_X);
+		helperShortToBuffer(buffer+6,currentTime);
+		lenght += 6;
+	}else if(codeToSend < 0x14){
+		buffer[0] = 'W';
+		helperIntToBuffer(buffer+2,(int32_t)(angleKalman[codeToSend-0x12]*100));
 		helperShortToBuffer(buffer+6,currentTime);
 		lenght += 6;
 	}
@@ -244,6 +249,23 @@ void changeValue(uint8_t* dataBuffer){
 			default:
 				break;
 		}
+	}else if(code < 12){
+		switch (code) {
+					case 8:
+						kalmanX.kalman_Q_angle = helperBufferToInt(dataBuffer+1,2) / 10000.f;
+						break;
+					case 9:
+						kalmanX.kalman_Q_bias = helperBufferToInt(dataBuffer+1,2)/ 10000.f;
+						break;
+					case 10:
+						kalmanX.kalman_R_measure = helperBufferToInt(dataBuffer+1,2)/ 10000.f;
+						break;
+					case 7:
+						pidDataY->ki = helperBufferToInt(dataBuffer+1,2);
+						break;
+					default:
+						break;
+				}
 	}
 
 }

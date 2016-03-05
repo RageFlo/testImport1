@@ -109,13 +109,19 @@ static void main_init(void){
 	pidDataY = &pidDataYObj;
 	pid_init(pidDataX,1000,0,1000,1,9000,900);
 	pid_init(pidDataY,1000,0,1000,1,9000,900);
+
+	initKalman(&kalmanX);
+	initKalman(&kalmanY);
+
+	kalmanSetAngle(&kalmanX, 90.);
+	kalmanSetAngle(&kalmanY, 90.);
 	puts("Init + Selfcheck okay!");
 }
 	
 static void main_loop(void){
 	static uint32_t loopCounter = 0;
-	static uint32_t divider100ms = 10;
-	
+	static uint32_t divider100ms = 100;
+	uint32_t i = 0;
 	if(!(loopCounter%divider100ms)){
 		HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_15);
 		kommuHandler();
@@ -125,11 +131,20 @@ static void main_loop(void){
 
 	}
 
-//	if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0) == GPIO_PIN_SET){
-//		bldc_set_power(1000,1);
-//	}else{
-//		bldc_set_power(power[0],1);
-//	}
+	if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0) == GPIO_PIN_SET){
+		if(!bursting_start && !bursting_end){
+			//bursting_start = 1;
+		}
+	}else{
+		if(bursting_end){
+			i = 0;
+			while(i <= currentburst ){
+				stdout_putchar(burst[i++]);
+			}
+			currentburst = 0;
+			bursting_end = 0;
+		}
+	}
 
 	loopCounter++;
 }

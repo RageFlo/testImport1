@@ -1,5 +1,6 @@
 #include "Daten_Filter.h"
 #include "globals.h"
+#include "Kalman.h"
 
 #define ACCLE_Z_OFFSET 3670
 #define OFFSET_DEVIDER 10
@@ -7,6 +8,8 @@ static uint8_t gettingGyroOffset;
 static int32_t gyroOffsetSamples = 0;
 static int32_t gyroOffsets[3] = {0,0,0};
 static int32_t gyroOffsetsReminder[3] = {0,0,0};
+
+
 
 void filterMain(void){
 	int i;
@@ -46,6 +49,21 @@ void filterMain(void){
 	Get_angle_from_accle();
 	//if(period%10)
 	Get_angle_from_comple();	
+	Get_angle_from_Kalman();
+
+
+	if(bursting_start && !bursting_end){
+		burst[currentburst++] =  (uint8_t)(acceltempgyroValsFiltered[4]>>8);
+		burst[currentburst++] =  (uint8_t)(acceltempgyroValsFiltered[4]);
+		burst[currentburst++] =  (uint8_t)(angleAccel[0]>>8);
+		burst[currentburst++] =  (uint8_t)(angleAccel[0]);
+		burst[currentburst++] =  1;
+		if(currentburst==MAXBURST-10){
+			bursting_start = 0;
+			burst[currentburst] =  0;
+			bursting_end = 1;
+		}
+	}
 }
 
 int Get_angle_from_accle(void){
@@ -58,9 +76,18 @@ int Get_angle_from_accle(void){
 
 int Get_angle_from_comple(void){
 	int state = 0;
-	angleComple[0] = (angleAccel[0]*1*131 + (angleComple[0] - acceltempgyroValsFiltered[4]/100)*2999)/3000;
-	angleComple[1] = (angleAccel[1]*1*131 + (angleComple[1] + acceltempgyroValsFiltered[5]/100)*2999)/3000;
-	angleComple[2] = (angleAccel[2]*1*131 + (angleComple[2] - acceltempgyroValsFiltered[6]/100)*2999)/3000;
+	angleComple[0] = (angleAccel[0]*1*131 + (angleComple[0] - acceltempgyroValsFiltered[4]/100)*1999)/2000;
+	angleComple[1] = (angleAccel[1]*1*131 + (angleComple[1] + acceltempgyroValsFiltered[5]/100)*1999)/2000;
+	angleComple[2] = (angleAccel[2]*1*131 + (angleComple[2] - acceltempgyroValsFiltered[6]/100)*1999)/2000;
+	return state;
+}
+
+int Get_angle_from_Kalman(void){
+	int state = 0;
+	//angleKalman[0] = kalmanGetAngle(&kalmanX,angleAccel[0],acceltempgyroValsFiltered[4]/(-131.f),0.001f);
+	//angleKalman[1] = kalmanGetAngle(&kalmanY,angleAccel[1],acceltempgyroValsFiltered[5]/(131.f),0.001f);
+	angleKalman[0] = kalman2GetAngle(&kalman2X,angleAccel[0],acceltempgyroValsFiltered[4]/(-13.1f));
+	angleKalman[1] = kalman2GetAngle(&kalman2Y,angleAccel[1],acceltempgyroValsFiltered[5]/(13.1f));
 	return state;
 }
 
