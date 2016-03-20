@@ -75,6 +75,14 @@ float getQangle(kalmanData* instance) { return instance->kalman_Q_angle; };
 float getQbias(kalmanData* instance) { return instance->kalman_Q_bias; };
 float getRmeasure(kalmanData* instance) { return instance->kalman_R_measure; };
 
+/*
+ * QUAD KALMAN FILTER
+ *
+ * FLORIAN HÖFER
+ * 03.2016
+ */
+
+
 #define KMAX_ANGLE_DELTA 10.0f
 #define KMAX_X4 50.0f
 #define KGAIN_1_1 (0.004305f)
@@ -87,6 +95,9 @@ float getRmeasure(kalmanData* instance) { return instance->kalman_R_measure; };
 #define KGAIN_2_3 (0.099184f)
 #define KGAIN_2_4 (0.000133f)
 
+void init2Kalman(kalman2Data* instance, float startAngle) {
+	instance->xStates[0] = startAngle;
+};
 
 float kalman2GetAngle(kalman2Data* instance, float newAngle, float newRate) {
 	float *x = instance->xStates;
@@ -103,7 +114,7 @@ float kalman2GetAngle(kalman2Data* instance, float newAngle, float newRate) {
 	x[0] += KGAIN_1_1 * diffAngle + KGAIN_2_1 * diffRate;
 	x[1] += KGAIN_1_2 * diffAngle + KGAIN_2_2 * diffRate;
 	x[2] += KGAIN_1_3 * diffAngle + KGAIN_2_3 * diffRate;
-	x[3] += KGAIN_1_4 * diffAngle + KGAIN_2_4  *diffRate;
+	x[3] += KGAIN_1_4 * diffAngle + KGAIN_2_4 * diffRate;
 
 	if(x[3] > KMAX_X4){
 		x[3] = KMAX_X4;

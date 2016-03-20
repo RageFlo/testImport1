@@ -32,6 +32,9 @@
     float kalmanGetQbias(kalmanData* instance);
     float kalmanGetRmeasure(kalmanData* instance);
 
+
+
+    void init2Kalman(kalman2Data* instance, float startAngle);
     float kalman2GetAngle(kalman2Data* instance, float newAngle, float newRate) ;
 
 

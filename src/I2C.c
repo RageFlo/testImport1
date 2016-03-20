@@ -1,4 +1,4 @@
-#include "I2C_Treiber.h"
+#include "I2C.h"
 #include "globals.h"
 #include "Daten_Filter.h"
 #include "PID.h"
@@ -181,8 +181,18 @@ void MPU6050_GetRawAccelGyro(int16_t* AccelGyro)
 		error = HAL_I2C_Mem_Read_DMA(&hnd,MPU6050_DEFAULT_ADDRESS,MPU6050_RA_ACCEL_XOUT_H,1,tmpBuffer,14);
 		if(error!=HAL_OK){
 			HAL_GPIO_WritePin(GPIOD,GPIO_PIN_13,GPIO_PIN_SET);
-			HAL_I2C_DeInit(&hnd);
-			HAL_I2C_Init(&hnd);
+			 /* Generate Stop */
+			 HAL_Delay10u(10);
+			 hnd.Instance->SR2;
+			 hnd.Instance->CR1 |= I2C_CR1_STOP;
+			 hnd.Instance->SR2;
+			 HAL_Delay10u(10);
+			 hnd.Instance->CR1 |= I2C_CR1_START;
+			 hnd.Instance->SR2;
+			 /* Generate Stop */
+			 HAL_Delay10u(10);
+			 hnd.Instance->CR1 |= I2C_CR1_STOP;
+			 hnd.Instance->SR2;
 
 		}else{
 			HAL_GPIO_WritePin(GPIOD,GPIO_PIN_13,GPIO_PIN_RESET);

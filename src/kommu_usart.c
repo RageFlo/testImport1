@@ -32,7 +32,7 @@
    ---------------------------------------------------------------------------*/
 
 
-#include "stdout_USART.h"
+#include "kommu_usart.h"
 #include "globals.h"
 #include "PWM.h"
 //-------- <<< Use Configuration Wizard in Context Menu >>> --------------------
@@ -83,16 +83,16 @@ int buildCommand(uint8_t* buffer, uint8_t* command){
 	uint8_t done = 0;
 	int i;
 	int recCount = ptrUSART->GetRxCount();
-	while((recCount > currentPos || currentPos > recCount) & !done){
+	while((recCount > currentPos || currentPos > recCount) && !done){
 		currentChar = buffer[currentPos];
-		if(currentChar == 0x02){
+		if(currentChar == 0x02 && !gotStart){
 			gotStart = 1;
 			for( i = 0; i < BUFFERSIZE_COM; i++){
 				command[i] = 0;
 			}
 			commandPos = 0;
 		}else if(!gotStart){
-			//out of message
+			puts("out of massage :(");
 		}else if(currentChar == 0x03  && (command[0]!='x' || commandPos > 3)){
 			gotStart = 0;
 			if(commandPos > 0)

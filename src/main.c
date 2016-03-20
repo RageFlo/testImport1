@@ -12,11 +12,12 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "globals.h"
-#include "stdout_USART.h"
-#include "I2C_Treiber.h"
+#include "kommu_usart.h"
+#include "I2C.h"
 #include "Daten_Filter.h"
 #include "PWM.h"
 #include "PID.h"
+#include "Kalman.h"
 #include <stdio.h>
 
 #ifdef _RTE_
@@ -110,11 +111,9 @@ static void main_init(void){
 	pid_init(pidDataX,1000,0,1000,1,9000,900);
 	pid_init(pidDataY,1000,0,1000,1,9000,900);
 
-	initKalman(&kalmanX);
-	initKalman(&kalmanY);
+	init2Kalman(&kalman2X,90);
+	init2Kalman(&kalman2Y,90);
 
-	kalmanSetAngle(&kalmanX, 90.);
-	kalmanSetAngle(&kalmanY, 90.);
 	puts("Init + Selfcheck okay!");
 }
 	
