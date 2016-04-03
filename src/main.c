@@ -69,6 +69,7 @@ int main(void)
 
 static void main_init(void){	
 	GPIO_InitTypeDef ledGPIOInit;
+	int i;
 	SystemInit();
 	HAL_Init();	
 	
@@ -94,6 +95,18 @@ static void main_init(void){
 	
 	pwm_init();
 	
+	for( i = 0; i < 4; i++){
+		power[i] = 0;
+	}
+	HAL_Delay(20);
+	for( i = 0; i < 4; i++){
+		power[i] = 1000;
+	}
+	HAL_Delay(20);
+	for( i = 0; i < 4; i++){
+		power[i] = 0;
+	}
+
 	if(initMPU()){
 		puts("Failed MPU");
 	}
@@ -108,8 +121,8 @@ static void main_init(void){
 	
 	pidDataX = &pidDataXObj;
 	pidDataY = &pidDataYObj;
-	pid_init(pidDataX,1000,0,1000,1,9000,900);
-	pid_init(pidDataY,1000,0,1000,1,9000,900);
+	pid_init(pidDataX,1,0,0,0.003f,9000,900);
+	pid_init(pidDataY,1,0,0,0.003f,9000,900);
 
 	init2Kalman(&kalman2X,90);
 	init2Kalman(&kalman2Y,90);
@@ -129,7 +142,7 @@ static void main_loop(void){
 	if(!(loopCounter)){
 
 	}
-
+	power[3] = 100+pidY_X;
 	if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0) == GPIO_PIN_SET){
 		if(!bursting_start && !bursting_end){
 			//bursting_start = 1;
@@ -162,8 +175,8 @@ void callback_MPU6050(void){
 
 void callback_PWMOut(void){
 	int i;
-	pidY_X = pid_run_use_gyro(pidDataX , 900 , angleComple[0] / 131 , acceltempgyroValsFiltered[0]  / 131);
-	pidY_Y = pid_run_use_gyro(pidDataY , 900 , angleComple[1] / 131 , acceltempgyroValsFiltered[1]  / 131);
+	pidY_X = pid_run_use_gyro(pidDataX , 900 , angleKalman[0] , acceltempgyroValsFiltered[0]  / 0.0076335878f);
+	pidY_Y = pid_run_use_gyro(pidDataY , 900 , angleKalman[1] , acceltempgyroValsFiltered[1]  / 0.0076335878f);
 	for( i = 0; i < 4; i++){
 		bldc_set_power(power[i],i+1);
 	}

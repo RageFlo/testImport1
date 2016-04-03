@@ -6,9 +6,9 @@
 
 #define PIDDOWNSCALE 1000
 
-void pid_init(struct pid_datastruct *to_int, int inKP, int inKI, int inKD, int inDT, int inLIM, int inLAST);
-int pi_run(struct pid_datastruct* pidData, int w, int x);
-int pid_run_use_gyro(struct pid_datastruct* pidData, int w, int x, int deltax);
-int pid_run(struct pid_datastruct* pidData, int w, int x);
+void pid_init(struct pid_datastruct *to_int, float inKP, float inKI, float inKD, float inDT, float inLIM, float inLAST);
+int pi_run(struct pid_datastruct* pidData, float w, float x);
+int pid_run_use_gyro(struct pid_datastruct* pidData, float w, float x, float deltax);
+int pid_run(struct pid_datastruct* pidData, float w, float x);
 
 #endif

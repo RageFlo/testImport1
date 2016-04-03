@@ -22,13 +22,13 @@ typedef struct kalman2Data{
 }kalman2Data;
 
 struct pid_datastruct {
-	int last_val;
-	int int_val;
-	int kp;
-	int ki;
-	int kd;
-	int dt;
-	int lim_int;
+	float last_val;
+	float int_val;
+	float kp;
+	float ki;
+	float kd;
+	float dt;
+	float lim_int;
 };
 
 
