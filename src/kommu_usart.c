@@ -189,6 +189,8 @@ void sendCode(uint8_t codeToSend, uint8_t* dataBuffer){
 		helperIntToBuffer(buffer+2,(int32_t)(angleKalman[codeToSend-0x12]*100));
 		helperShortToBuffer(buffer+6,currentTime);
 		lenght += 6;
+	}else{
+		return;
 	}
 	sendCommand(buffer, lenght);
 }

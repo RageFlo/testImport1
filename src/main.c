@@ -175,8 +175,8 @@ void callback_MPU6050(void){
 
 void callback_PWMOut(void){
 	int i;
-	pidY_X = pid_run_use_gyro(pidDataX , 900 , angleKalman[0] , acceltempgyroValsFiltered[0]  / 0.0076335878f);
-	pidY_Y = pid_run_use_gyro(pidDataY , 900 , angleKalman[1] , acceltempgyroValsFiltered[1]  / 0.0076335878f);
+	pidY_X = pid_run_use_gyro(pidDataX , 900 , angleKalman[0] , acceltempgyroValsFiltered[0]  *  (1/0.0076335878f));
+	pidY_Y = pid_run_use_gyro(pidDataY , 900 , angleKalman[1] , acceltempgyroValsFiltered[1]  *  (1/0.0076335878f));
 	for( i = 0; i < 4; i++){
 		bldc_set_power(power[i],i+1);
 	}
